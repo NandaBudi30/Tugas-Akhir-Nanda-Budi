@@ -29,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // ->brandName("McDerott")
             ->brandLogo('/image/logomcdermott.png')
             ->colors([
                 'primary' => Color::Blue,
