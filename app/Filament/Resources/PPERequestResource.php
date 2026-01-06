@@ -23,18 +23,6 @@ class PPERequestResource extends Resource
     protected static ?string $navigationGroup = 'Pengajuan';
     protected static ?int $navigationSort = 3;
 
-    // ⛔ hanya superadmin & karyawan
-    public static function shouldRegisterNavigation(): bool
-    {
-        return auth()->check() && auth()->user()->hasAnyRole(['superadmin', 'karyawan']);
-    }
-
-    // ⛔ Hanya karyawan yang bisa create
-    public static function canCreate(): bool
-    {
-        return auth()->check() && auth()->user()->hasRole('karyawan');
-    }
-
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -129,6 +117,18 @@ class PPERequestResource extends Resource
             'create' => Pages\CreatePPERequest::route('/create'),
             'view' => Pages\ViewPPERequest::route('/{record}'),
         ];
+    }
+
+    // ⛔ hanya superadmin & karyawan
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->hasAnyRole(['superadmin', 'karyawan']);
+    }
+
+    // ⛔ Hanya karyawan yang bisa create
+    public static function canCreate(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('karyawan');
     }
 
     public static function getEloquentQuery(): Builder
