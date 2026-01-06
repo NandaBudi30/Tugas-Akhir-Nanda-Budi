@@ -30,6 +30,7 @@ class ManageUsers extends ManageRecords
             CreateAction::make()
                 ->label('Tambah User Baru')
                 ->icon('heroicon-o-user-plus')
+                ->createAnother(false)
                 ->visible(fn () => auth()->user()?->hasRole('superadmin')),
         ];
     }

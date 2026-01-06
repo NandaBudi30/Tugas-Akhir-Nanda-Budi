@@ -25,11 +25,14 @@ class AksesGedungResource extends Resource
     {
         return $form->schema([
             Forms\Components\Hidden::make('user_id')
-                ->default(fn () => auth()->id()),
+                ->default(fn() => auth()->id()),
 
             Forms\Components\TextInput::make('no_kartu')
                 ->label('No Kartu')
-                ->required(),
+                ->rules(['required'])
+                ->validationMessages([
+                    'required' => 'Kolom wajib diisi!',
+                ]),
 
             Forms\Components\Hidden::make('status')
                 ->default('pending'),
@@ -39,32 +42,43 @@ class AksesGedungResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('user.name')->label('Nama'),
-            Tables\Columns\TextColumn::make('user.no_karyawan')->label('No Karyawan'),
-            Tables\Columns\TextColumn::make('user.nama_perusahaan')->label('Perusahaan'),
-            Tables\Columns\TextColumn::make('no_kartu')->label('No Kartu'),
+            Tables\Columns\TextColumn::make('user.name')
+                ->label('Nama')
+                ->when(
+                        auth()->user()->hasRole(['superadmin']),
+                        fn($column) => $column->searchable()
+                    ),
+            Tables\Columns\TextColumn::make('user.no_karyawan')
+                ->label('No Karyawan'),
+            Tables\Columns\TextColumn::make('user.nama_perusahaan')
+                ->label('Perusahaan'),
+            Tables\Columns\TextColumn::make('no_kartu')
+                ->label('No Kartu')
+                ->alignCenter(),
             Tables\Columns\TextColumn::make('status')
                 ->badge()
+                ->alignCenter()
                 ->colors([
                     'warning' => 'pending',
                     'success' => 'disetujui',
                     'danger'  => 'ditolak',
                 ]),
         ])
-        ->actions([
-            Tables\Actions\Action::make('approve')
-                ->label('Setujui')
-                ->color('success')
-                ->visible(fn () => auth()->user()->hasRole('superadmin'))
-                ->action(fn (AksesGedung $record) => $record->update(['status' => 'disetujui'])),
 
-            Tables\Actions\Action::make('reject')
-                ->label('Tolak')
-                ->color('danger')
-                ->visible(fn () => auth()->user()->hasRole('superadmin'))
-                ->action(fn (AksesGedung $record) => $record->update(['status' => 'ditolak'])),
-        ])
-        ->emptyStateHeading('Tidak ada Pengajuan yang ditemukan');
+            ->actions([
+                Tables\Actions\Action::make('approve')
+                    ->label('Setujui')
+                    ->color('success')
+                    ->visible(fn() => auth()->user()->hasRole('superadmin'))
+                    ->action(fn(AksesGedung $record) => $record->update(['status' => 'disetujui'])),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Tolak')
+                    ->color('danger')
+                    ->visible(fn() => auth()->user()->hasRole('superadmin'))
+                    ->action(fn(AksesGedung $record) => $record->update(['status' => 'ditolak'])),
+            ])
+            ->emptyStateHeading('Tidak ada Pengajuan yang ditemukan');
     }
 
     public static function getPages(): array
@@ -78,6 +92,9 @@ class AksesGedungResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
+        // Urutkan data TERBARU di atas
+        $query->orderByDesc('created_at');
 
         // membatasi karyawan hanya bisa melihat pengajuannya sendiri
         if (auth()->check() && auth()->user()->hasRole('karyawan')) {

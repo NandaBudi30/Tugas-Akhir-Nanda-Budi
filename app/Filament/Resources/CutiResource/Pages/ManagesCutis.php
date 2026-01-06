@@ -12,10 +12,13 @@ class ManageCutis extends ManageRecords
 
     protected function getHeaderActions(): array
     {
+        $user = auth()->user();
+
         return [
             Actions\CreateAction::make()
                 ->label('Ajukan Cuti Baru')
                 ->icon('heroicon-o-plus-circle')
+                ->createAnother(false)
                 ->mutateFormDataUsing(function (array $data): array {
                     // kalau role karyawan, set otomatis user_id
                     if (auth()->user()->hasRole('karyawan')) {

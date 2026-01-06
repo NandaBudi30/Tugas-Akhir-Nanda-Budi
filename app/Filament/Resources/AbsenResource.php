@@ -2,14 +2,15 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\AbsenResource\Pages;
-use App\Models\Absen;
-use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use App\Models\User;
 use Filament\Tables;
+use App\Models\Absen;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\AbsenResource\Pages;
 
 class AbsenResource extends Resource
 {
@@ -53,10 +54,35 @@ class AbsenResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('Nama Karyawan'),
-                Tables\Columns\TextColumn::make('tanggal')->date(),
-                Tables\Columns\TextColumn::make('jam_masuk'),
-                Tables\Columns\TextColumn::make('jam_pulang'),
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Nama Karyawan')
+                    ->when(
+                        auth()->user()->hasRole(['admin', 'superadmin']),
+                        fn($column) => $column->searchable()
+                    ),
+
+                Tables\Columns\TextColumn::make('tanggal')
+                    ->date()
+                    ->label('Tanggal masuk')
+                    ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('jam_masuk')
+                    ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Tanggal Pulang')
+                    ->state(function ($record) {
+                        return $record->jam_pulang
+                            ? $record->updated_at
+                            : null;
+                    })
+                    ->date()
+                    ->placeholder('-')
+                    ->alignCenter(),
+
+                Tables\Columns\TextColumn::make('jam_pulang')
+                    ->alignCenter()
+                    ->placeholder('-'),
             ])
             ->filters(
                 array_filter([
@@ -71,13 +97,6 @@ class AbsenResource extends Resource
                                 ->when($data['from'], fn($q) => $q->whereDate('tanggal', '>=', $data['from']))
                                 ->when($data['until'], fn($q) => $q->whereDate('tanggal', '<=', $data['until']));
                         }),
-
-                    // Filter nama karyawan (hanya untuk admin/superadmin)
-                    $user->hasAnyRole(['admin', 'superadmin'])
-                        ? Tables\Filters\SelectFilter::make('user_id')
-                        ->label('Nama Karyawan')
-                        ->options(User::pluck('name', 'id')->toArray())
-                        : null,
                 ])
             )
             ->emptyStateHeading('Tidak ada absensi yang ditemukan');
@@ -88,5 +107,15 @@ class AbsenResource extends Resource
         return [
             'index' => Pages\ManageAbsens::route('/'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // Urutkan data TERBARU di atas
+        $query->orderByDesc('created_at');
+
+        return $query;
     }
 }

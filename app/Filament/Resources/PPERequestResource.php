@@ -43,7 +43,10 @@ class PPERequestResource extends Resource
 
             Forms\Components\TextInput::make('nama_barang')
                 ->label('Nama Barang')
-                ->required(),
+                ->rules(['required'])
+                ->validationMessages([
+                    'required' => 'Kolom wajib diisi!',
+                ]),
 
             Forms\Components\FileUpload::make('foto_barang')
                 ->label('Foto Barang')
@@ -54,7 +57,10 @@ class PPERequestResource extends Resource
                 ->imagePreviewHeight('100') // 🔹 thumbnail kecil biar cepat
                 ->multiple() // bisa upload banyak gambar
                 ->openable() // klik untuk lihat ukuran asli
-                ->required(),
+                ->rules(['required'])
+                ->validationMessages([
+                    'required' => 'Kolom wajib diisi!',
+                ]),
 
             Forms\Components\Hidden::make('status')
                 ->default('pending'),
@@ -64,11 +70,17 @@ class PPERequestResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('user.name')->label('Nama Karyawan'),
-            Tables\Columns\TextColumn::make('nama_barang')->label('Nama Barang'),
-
+            Tables\Columns\TextColumn::make('user.name')
+                ->label('Nama Karyawan')
+                ->when(
+                        auth()->user()->hasRole(['superadmin']),
+                        fn($column) => $column->searchable()
+                    ),
+            Tables\Columns\TextColumn::make('nama_barang')
+                ->label('Nama Barang'),
             Tables\Columns\ImageColumn::make('foto_barang')
                 ->label('Foto Barang')
+                ->alignCenter()
                 ->circular()
                 ->stacked()
                 ->limit(3)
@@ -76,12 +88,14 @@ class PPERequestResource extends Resource
 
             Tables\Columns\TextColumn::make('status')
                 ->badge()
+                ->alignCenter()
                 ->colors([
                     'warning' => 'pending',
                     'success' => 'disetujui',
                     'danger' => 'ditolak',
                 ]),
         ])
+
             ->actions([
                 Tables\Actions\Action::make('approve')
                     ->label('Setujui')
@@ -101,7 +115,7 @@ class PPERequestResource extends Resource
                     ->label('Hapus')
                     ->modalHeading('Hapus Pengajuan')
                     ->modalDescription('Apakah Anda yakin ingin menghapus pengajuan ini?')
-                    ->modalSubmitActionLabel('Ya, Hapus') 
+                    ->modalSubmitActionLabel('Ya, Hapus')
                     ->successNotificationTitle('Pengajuan berhasil dihapus!')
                     ->visible(fn() => auth()->user()->hasRole('superadmin')),
             ])
@@ -120,6 +134,9 @@ class PPERequestResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
+        // Urutkan data TERBARU di atas
+        $query->orderByDesc('created_at');
 
         // Karyawan hanya bisa lihat miliknya
         if (auth()->check() && auth()->user()->hasRole('karyawan')) {

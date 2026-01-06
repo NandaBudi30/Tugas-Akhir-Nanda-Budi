@@ -2,13 +2,10 @@
 
 namespace App\Filament\Resources\CutiResource\Pages;
 
-use Filament\Actions;
-use Filament\Actions\Action;
 use App\Filament\Resources\CutiResource;
-use Filament\Resources\Pages\CreateRecord;
+use Filament\Resources\Pages\ViewRecord;
 
-class CreateCuti extends CreateRecord
+class ViewCuti extends ViewRecord
 {
     protected static string $resource = CutiResource::class;
-
 }

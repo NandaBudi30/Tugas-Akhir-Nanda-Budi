@@ -33,7 +33,7 @@ class CutiStats extends BaseWidget
                     Cuti::where('user_id', $user->id)
                         ->where(function ($q) {
                             $q->where('status_admin', 'pending')
-                              ->orWhere('status_superadmin', 'pending');
+                                ->orWhere('status_superadmin', 'pending');
                         })->count()
                 )
                     ->description('Menunggu persetujuan')
@@ -54,7 +54,7 @@ class CutiStats extends BaseWidget
                     Cuti::where('user_id', $user->id)
                         ->where(function ($q) {
                             $q->where('status_admin', 'ditolak')
-                              ->orWhere('status_superadmin', 'ditolak');
+                                ->orWhere('status_superadmin', 'ditolak');
                         })->count()
                 )
                     ->description('Cuti saya ditolak')
@@ -86,19 +86,37 @@ class CutiStats extends BaseWidget
         // Jika superadmin -> fokus ke status_superadmin
         if ($user->hasRole('superadmin')) {
             return [
-                Stat::make('Total Pengajuan Cuti', Cuti::count())
+                Stat::make(
+                    'Total Masuk Superadmin',
+                    Cuti::where('status_admin', 'disetujui')->count()
+                )
                     ->description('Semua pengajuan cuti karyawan')
                     ->color('primary'),
 
-                Stat::make('Pending Superadmin', Cuti::where('status_superadmin', 'pending')->count())
+                Stat::make(
+                    'Pending Superadmin',
+                    Cuti::where('status_admin', 'disetujui')
+                        ->where('status_superadmin', 'pending')
+                        ->count()
+                )
                     ->description('Belum diproses superadmin')
                     ->color('warning'),
 
-                Stat::make('Disetujui Superadmin', Cuti::where('status_superadmin', 'disetujui')->count())
+                Stat::make(
+                    'Disetujui Superadmin',
+                    Cuti::where('status_admin', 'disetujui')
+                        ->where('status_superadmin', 'disetujui')
+                        ->count()
+                )
                     ->description('Sudah disetujui superadmin')
                     ->color('success'),
 
-                Stat::make('Ditolak Superadmin', Cuti::where('status_superadmin', 'ditolak')->count())
+                Stat::make(
+                    'Ditolak Superadmin',
+                    Cuti::where('status_admin', 'disetujui')
+                        ->where('status_superadmin', 'ditolak')
+                        ->count()
+                )
                     ->description('Ditolak superadmin')
                     ->color('danger'),
             ];

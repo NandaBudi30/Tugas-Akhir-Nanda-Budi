@@ -26,7 +26,6 @@ class UserResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return auth()->check() && auth()->user()->hasRole('superadmin');
-        
     }
 
     public static function form(Form $form): Form
@@ -35,37 +34,61 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->label('Nama')
-                    ->required(),
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                    ]),
 
                 Forms\Components\TextInput::make('email')
                     ->email()
-                    ->required()
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                        'unique'   => 'Email sudah terdaftar.',
+                    ])
                     ->unique(ignoreRecord: true),
 
                 Forms\Components\TextInput::make('password')
                     ->password()
-                    ->required(fn($record) => $record === null)
+                    ->rules(fn($record) => $record ? [] : ['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                    ])
                     ->dehydrateStateUsing(fn($state) => bcrypt($state))
                     ->label('Password'),
 
                 Forms\Components\TextInput::make('no_telepon')
                     ->label('No Telepon')
-                    ->required(),
+                    ->numeric()
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                    ]),
 
                 Forms\Components\TextInput::make('no_karyawan')
                     ->label('No Karyawan')
-                    ->required()
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                        'unique'   => 'No karyawan sudah terdaftar.',
+                    ])
                     ->unique(ignoreRecord: true),
 
                 Forms\Components\TextInput::make('nama_perusahaan')
                     ->label('Nama Perusahaan')
-                    ->required(),
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                    ]),
 
                 Forms\Components\Select::make('roles')
                     ->label('Role')
                     ->relationship('roles', 'name')
                     ->preload()
-                    ->required(),
+                    ->rules(['required'])
+                    ->validationMessages([
+                        'required' => 'Kolom wajib diisi!',
+                    ]),
             ]);
     }
 
@@ -73,10 +96,14 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Nama'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Nama')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('email'),
-                Tables\Columns\TextColumn::make('nama_perusahaan')->label('Nama Perusahaan'),
-                Tables\Columns\TextColumn::make('roles.name')->label('Role'),
+                Tables\Columns\TextColumn::make('nama_perusahaan')
+                    ->label('Nama Perusahaan'),
+                Tables\Columns\TextColumn::make('roles.name')
+                    ->label('Role'),
             ])
             ->filters([
                 // 🔹 Filter berdasarkan Role
@@ -95,8 +122,7 @@ class UserResource extends Resource
                             ->pluck('nama_perusahaan', 'nama_perusahaan')
                             ->toArray()
                     )
-                    ->searchable()
-                    ->preload(),
+                    ->searchable(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

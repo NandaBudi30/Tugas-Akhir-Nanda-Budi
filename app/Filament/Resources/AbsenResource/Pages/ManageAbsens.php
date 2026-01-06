@@ -6,7 +6,6 @@ use App\Filament\Resources\AbsenResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
 use App\Models\Absen;
-use Illuminate\Support\Facades\Auth;
 use Filament\Notifications\Notification;
 
 class ManageAbsens extends ManageRecords
@@ -18,42 +17,88 @@ class ManageAbsens extends ManageRecords
         $user = auth()->user();
 
         return array_filter([
+            // =======================
+            // ABSEN MASUK
+            // =======================
             $user->hasRole('karyawan')
                 ? Actions\Action::make('Absen Masuk')
-                ->action(function () use ($user) {
-                    $today = now()->toDateString();
+                    ->color('success')
+                    ->action(function () use ($user) {
 
-                    $absen = Absen::firstOrCreate(
-                        ['user_id' => $user->id, 'tanggal' => $today],
-                        ['jam_masuk' => now()->format('H:i:s')]
-                    );
+                        $today = now()->toDateString();
 
-                    if ($absen->wasRecentlyCreated) {
-                        Notification::make()->title('Berhasil Absen Masuk')->success()->send();
-                    } else {
-                        Notification::make()->title('Anda sudah absen masuk hari ini')->danger()->send();
-                    }
-                })
-                ->color('success')
+                        // 🔒 Sudah absen masuk & pulang hari ini
+                        $sudahSelesaiHariIni = Absen::where('user_id', $user->id)
+                            ->where('tanggal', $today)
+                            ->whereNotNull('jam_masuk')
+                            ->whereNotNull('jam_pulang')
+                            ->exists();
+
+                        if ($sudahSelesaiHariIni) {
+                            Notification::make()
+                                ->title('Anda sudah melakukan absen masuk')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // ❗ Masih ada absen belum pulang (shift malam)
+                        $masihAda = Absen::where('user_id', $user->id)
+                            ->whereNull('jam_pulang')
+                            ->exists();
+
+                        if ($masihAda) {
+                            Notification::make()
+                                ->title('Anda belum melakukan absen pulang')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // ✅ Absen masuk
+                        Absen::create([
+                            'user_id'   => $user->id,
+                            'tanggal'   => $today,
+                            'jam_masuk' => now()->format('H:i:s'),
+                        ]);
+
+                        Notification::make()
+                            ->title('Berhasil Absen Masuk')
+                            ->success()
+                            ->send();
+                    })
                 : null,
 
+            // =======================
+            // ABSEN PULANG
+            // =======================
             $user->hasRole('karyawan')
                 ? Actions\Action::make('Absen Pulang')
-                ->action(function () use ($user) {
-                    $today = now()->toDateString();
+                    ->color('danger')
+                    ->action(function () use ($user) {
 
-                    $absen = Absen::where('user_id', $user->id)
-                        ->where('tanggal', $today)
-                        ->first();
+                        $absen = Absen::where('user_id', $user->id)
+                            ->whereNull('jam_pulang')
+                            ->orderBy('jam_masuk', 'desc')
+                            ->first();
 
-                    if ($absen && !$absen->jam_pulang) {
-                        $absen->update(['jam_pulang' => now()->format('H:i:s')]);
-                        Notification::make()->title('Berhasil Absen Pulang')->success()->send();
-                    } else {
-                        Notification::make()->title('Anda belum absen masuk / sudah absen pulang')->danger()->send();
-                    }
-                })
-                ->color('danger')
+                        if (! $absen) {
+                            Notification::make()
+                                ->title('Anda belum melakukan absen masuk')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $absen->update([
+                            'jam_pulang' => now()->format('H:i:s'),
+                        ]);
+
+                        Notification::make()
+                            ->title('Berhasil Absen Pulang')
+                            ->success()
+                            ->send();
+                    })
                 : null,
         ]);
     }
